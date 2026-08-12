@@ -1,110 +1,85 @@
-# Ricoh Aficio SP C240DN DDST on CachyOS/Linux
+# Ricoh Aficio SP C240DN – DDST Driver for CachyOS/Linux
 
-Working CUPS integration for the **Ricoh Aficio SP C240DN** on Linux using the original Ricoh macOS DDST/GDI filter executed through **Darling**.
+Working CUPS setup for the **Ricoh Aficio SP C240DN** using the original
+Ricoh macOS DDST/GDI filter executed through **Darling**.
 
-> ⚠️ This is an experimental compatibility solution using a patched proprietary Ricoh macOS printer filter.
-> The repository should remain private unless redistribution rights for the original Ricoh components have been verified.
+This project exists because the printer uses Ricoh's proprietary DDST/GDI
+printing language and the original macOS filter cannot run natively on Linux.
 
-## Status
+The original Ricoh filter has been patched to work around incompatibilities
+between the old macOS driver and Darling.
 
-**Working.**
+Tested on **CachyOS / Arch Linux** with CUPS and a Ricoh Aficio SP C240DN
+connected over JetDirect/AppSocket (`socket://...:9100`).
 
-Tested successfully on CachyOS:
-
-- CUPS accepts normal print jobs
-- CUPS generates raster data
-- the original Ricoh macOS filter runs through Darling
-- DDST/GDI output is generated
-- output is sent to the printer via JetDirect / RAW port 9100
-- physical pages print successfully
-
-Test printer:
-
-**Ricoh Aficio SP C240DN**
-
-Printer connection:
-
-```text
-socket://172.26.47.1:9100
-```
-
-CUPS queue:
-
-```text
-Ricoh_SPC240
-```
+> **Status:** Working. Real pages have successfully been printed from CachyOS.
 
 ---
 
-## Architecture
+## Overview
 
-The resulting printing pipeline is:
+The printing path is:
 
 ```text
-Application
-    │
-    ▼
-   CUPS
-    │
-    │ CUPS Raster
-    ▼
+Linux application
+       │
+       ▼
+      CUPS
+       │
+       ▼
+CUPS raster data
+       │
+       ▼
 rastertoricohspc240
-    │
-    ▼
+       │
+       ▼
 ricoh-spc240-ddst
-    │
-    │ sudo → user running Darling
-    ▼
-  Darling
-    │
-    ▼
-Patched Ricoh macOS filter
-RicohAficioSPC240DNFilter-final3
-    │
-    │ DDST / GDI
-    ▼
-CUPS socket backend
-    │
-    │ TCP/9100
-    ▼
+       │
+       ▼
+sudo: cups → desktop user
+       │
+       ▼
+Darling
+       │
+       ▼
+patched Ricoh macOS DDST filter
+       │
+       ▼
+Ricoh GDI/DDST stream
+       │
+       ▼
+socket://PRINTER_IP:9100
+       │
+       ▼
 Ricoh Aficio SP C240DN
 ```
 
-The printer therefore remains usable as a normal CUPS printer from Linux applications.
-
----
-
-## Why this exists
-
-The Ricoh Aficio SP C240DN uses Ricoh's proprietary DDST/GDI printing protocol.
-
-The original Ricoh macOS driver contains a filter capable of converting CUPS raster data into the format expected by the printer.
-
-Instead of reimplementing the complete proprietary raster-to-DDST conversion, this project runs the original x86_64 macOS filter through Darling.
-
-Several incompatibilities between the old macOS driver and Darling had to be worked around before the filter could complete a print job.
-
----
-
-## Requirements
-
-The current setup requires:
-
-- x86_64 Linux
-- CUPS
-- Darling
-- sudo
-- a working Darling prefix
-- network access to the printer
-- original Ricoh SP C240DN macOS driver components
-
-The current wrapper expects the Darling prefix belonging to:
+The resulting printer data starts with the expected Ricoh GDI header:
 
 ```text
-h3adbang3r
+GDIJ
 ```
 
-The supplied configuration therefore needs modification if installed for another Linux user.
+and a successfully completed job ends with:
+
+```text
+JIDG
+```
+
+---
+
+## Why Darling is required
+
+Ricoh supplied a macOS filter for this printer which contains the proprietary
+logic required to convert rasterized print data into the GDI/DDST format
+understood by the printer.
+
+Rather than reimplementing the complete proprietary output format, this setup
+runs the original x86_64 macOS filter through Darling.
+
+Unfortunately, the original filter is old enough to hit several compatibility
+problems in Darling. Therefore the executable used by this project contains
+small binary patches.
 
 ---
 
@@ -112,10 +87,12 @@ The supplied configuration therefore needs modification if installed for another
 
 ```text
 .
+├── README.md
+├── install.sh
+├── ricoh-spc240-ddst
 ├── cups
 │   ├── rastertoricohspc240
 │   └── RicohAficioSPC240DN-CachyOS.ppd
-├── install.sh
 ├── payload
 │   ├── libppdshim.dylib
 │   └── RicohAficioSPC240DNFilter.app
@@ -130,121 +107,119 @@ The supplied configuration therefore needs modification if installed for another
 │           │   ├── RicohAficioSPC240DNFilter-final2
 │           │   └── RicohAficioSPC240DNFilter-final3
 │           └── Resources
-├── ricoh-spc240-ddst
+│               ├── RICOH Aficio SP C240DN CS.icc
+│               ├── ScreenSets.plist
+│               ├── Screens/
+│               └── ...
 └── sudoers
     └── ricoh-spc240
 ```
 
-`RicohAficioSPC240DNFilter-final3` is the currently working filter binary.
+The intermediate filter binaries are intentionally retained. They document the
+reverse-engineering and compatibility work that led to the working filter.
 
 ---
 
-# Reverse engineering notes
+## Patched filter binaries
 
-## 1. Missing PPD lookup
+The `MacOS` directory contains the original Ricoh executable and the different
+stages created while debugging the driver under Darling.
 
-The original filter expects to obtain its PPD through the macOS/CUPS environment.
+| Binary | Description |
+|---|---|
+| `RicohAficioSPC240DNFilter` | Original, unmodified Ricoh macOS filter |
+| `RicohAficioSPC240DNFilter-patched` | First compatibility patch |
+| `RicohAficioSPC240DNFilter-test2` | Experimental patched version |
+| `RicohAficioSPC240DNFilter-final` | Intermediate working/debugging version |
+| `RicohAficioSPC240DNFilter-final2` | Later control-flow fix; generates complete GDI output |
+| `RicohAficioSPC240DNFilter-final3` | **Current production version; generates valid GDI output and exits successfully** |
 
-Under Darling this failed with:
-
-```text
-ASSERT: Unable to get ppd file
-CUPSFilter initWithArgc:argv failed
-```
-
-A small compatibility library was therefore created:
-
-```text
-libppdshim.dylib
-```
-
-It supplies the PPD expected by the original Ricoh filter.
-
-The filter is started with:
+The production wrapper uses:
 
 ```text
-DYLD_FORCE_FLAT_NAMESPACE=1
-DYLD_INSERT_LIBRARIES=.../libppdshim.dylib
+RicohAficioSPC240DNFilter-final3
 ```
 
-After this workaround the Ricoh filter successfully parses the PPD and begins processing CUPS raster data.
+The older binaries are not required for normal printing but are intentionally
+kept as documentation of the reverse-engineering process.
 
 ---
 
-## 2. NSCalendarDate incompatibility
+## Compatibility patches
 
-The next failure occurred during creation of the Ricoh GDI job header:
+### 1. NSCalendarDate crash
+
+The original filter calls:
+
+```objc
+[NSCalendarDate date]
+```
+
+followed by:
+
+```objc
+destinyDate
+```
+
+Under Darling this resulted in:
 
 ```text
 NSCalendarDate initWithTimeIntervalSinceReferenceDate:
 requires a subclass implementation
 ```
 
-Disassembly showed the original filter calling:
+and terminated the filter with:
 
 ```text
-[NSCalendarDate date]
-[date destinyDate]
+Abort trap: 6
+Exit-Code: 134
 ```
 
-while constructing the file header.
+The relevant original code path was:
 
-The resulting timestamp is not required for raster conversion itself, so the problematic date-generation sequence was patched out and the corresponding header field is written without invoking the incompatible Darling implementation.
+```asm
+movq    *OBJC_CLASS*$_NSCalendarDate, %rdi
+callq   ...                 ; date
+leaq    ..., %rsi           ; destinyDate
+movq    %rax, %rdi
+callq   ...
+bswapl  %eax
+movl    %eax, 0x14(%rbx)
+```
 
-This allowed processing to reach the raster conversion stage.
+This timestamp generation is not required for producing usable printer data,
+so the incompatible code path was bypassed.
+
+After this patch the filter progressed into actual raster processing.
 
 ---
 
-## 3. End-of-page floating point exception
+### 2. End-of-page / control-flow issue
 
-After successfully processing all raster bands, the filter initially terminated with:
-
-```text
-Floating point exception: 8
-```
-
-The failure occurred after:
+After bypassing the calendar crash, the complete raster page was processed:
 
 ```text
 RasterFilter run: Processed 6816 lines
 RasterFilter endPage: blankAccumulator = 0xff
 ```
 
-The generated output already contained valid Ricoh GDI data but the process crashed during its end-of-page logic.
+but the process could terminate with:
 
-Further inspection of the Mach-O binary identified problematic control flow around the page finalization path.
+```text
+Floating point exception: 8
+Exit-Code: 136
+```
 
-The relevant branch logic was patched to bypass the incompatible path.
+Further analysis identified an incompatible control-flow path around the
+end-of-page handling.
 
-After this modification the filter reached:
+The later patches bypass this path and allow the filter to finish the job.
+
+The final version reports:
 
 ```text
 GDIFilter endJob:
 GDIFilter endJob: sending JIDG
-```
-
-and produced a complete GDI stream ending with:
-
-```text
-JIDG
-```
-
----
-
-## 4. Correct return status
-
-Although the generated GDI stream was complete, an intermediate version still returned failure:
-
-```text
-RasterFilter run: exiting - result: 0
-rasterToGDI ending with result 1
-```
-
-The final patch adjusts the success path so that the filter terminates normally.
-
-The working version reports:
-
-```text
 RasterFilter run: exiting - result: 1
 rasterToGDI ending with result 0
 ```
@@ -252,301 +227,506 @@ rasterToGDI ending with result 0
 and exits with:
 
 ```text
-0
-```
-
-This binary is stored as:
-
-```text
-RicohAficioSPC240DNFilter-final3
+Exit-Code: 0
 ```
 
 ---
 
-# Successful reference run
+## Successful output
 
-A successful monochrome A4/600 dpi job produced:
+A successful generated stream begins with:
 
 ```text
-HWResolution = 600 x 600
-PageSize = 595 x 842
-cupsWidth = 4761
-cupsHeight = 6816
-cupsBitsPerColor = 8
-cupsBitsPerPixel = 8
-cupsBytesPerLine = 4761
-cupsColorOrder = chunked
+47 44 49 4a
+G  D  I  J
 ```
 
-The page was processed in 27 raster bands:
+Example:
 
 ```text
-band total 27
-band num 27
-ditherBandCount num 27
+00000000  47 44 49 4a 00 00 00 78  00 64 00 01 00 00 00 00
+00000010  00 00 00 a8 00 00 00 00  00 00 00 00 00 00 00 00
+```
+
+and ends with:
+
+```text
+4a 49 44 47
+J  I  D  G
+```
+
+A real print job using this output was successfully printed by the
+Ricoh Aficio SP C240DN.
+
+---
+
+## Requirements
+
+The host requires:
+
+- Linux
+- CUPS
+- Darling
+- `sudo`
+- the original Ricoh filter resources included in `payload/`
+- a network-accessible Ricoh Aficio SP C240DN
+
+The current setup was developed and tested on CachyOS.
+
+The printer is accessed using raw JetDirect/AppSocket on TCP port 9100.
+
+---
+
+## CUPS user
+
+On the tested CachyOS installation, CUPS runs print filters as:
+
+```text
+User 209
+Group 209
+```
+
+which corresponds to:
+
+```text
+cups:x:209:209:cups helper user:/:/usr/bin/nologin
+```
+
+Darling cannot directly operate normally under this service account because
+it requires a usable user environment/prefix.
+
+The wrapper therefore executes Darling as the desktop user via a tightly
+restricted sudo rule.
+
+---
+
+## sudo configuration
+
+The required rule is stored in:
+
+```text
+sudoers/ricoh-spc240
+```
+
+Contents:
+
+```sudoers
+Defaults:cups !pam_acct_mgmt
+cups ALL=(h3adbang3r) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
+```
+
+The `pam_acct_mgmt` override is required because the `cups` service account has
+a `nologin` system-account configuration which otherwise causes sudo to fail
+with an account/PAM error.
+
+The permission is intentionally narrow:
+
+**`cups` may execute only `/usr/local/libexec/ricoh-spc240-ddst` as the
+configured desktop user without a password.**
+
+Validate the file before installation:
+
+```bash
+sudo visudo -cf sudoers/ricoh-spc240
+```
+
+Expected result:
+
+```text
+sudoers/ricoh-spc240: parsed OK
+```
+
+or, with a German locale:
+
+```text
+Analyse OK
+```
+
+---
+
+## Installation
+
+Run:
+
+```bash
+sudo ./install.sh
+```
+
+The installer deploys the required files to the system.
+
+The important components are:
+
+```text
+/opt/ricoh-spc240/
+/usr/local/libexec/ricoh-spc240-ddst
+/usr/lib/cups/filter/rastertoricohspc240
+/etc/cups/ppd/
+/etc/sudoers.d/ricoh-spc240
+```
+
+The exact installed paths can be inspected in `install.sh`.
+
+---
+
+## PPD validation
+
+The supplied PPD can be checked with:
+
+```bash
+cupstestppd -v cups/RicohAficioSPC240DN-CachyOS.ppd
+```
+
+The final PPD passes validation with:
+
+```text
+KEINE FEHLER GEFUNDEN
+```
+
+Some warnings remain for legacy paper-size names and the old PPD 8.3 filename
+recommendation. These do not prevent operation.
+
+---
+
+## Adding the printer
+
+Replace `PRINTER_IP` with the address of the printer:
+
+```bash
+sudo lpadmin \
+    -p Ricoh_SPC240 \
+    -E \
+    -v socket://PRINTER_IP:9100 \
+    -P cups/RicohAficioSPC240DN-CachyOS.ppd
+```
+
+Example:
+
+```bash
+sudo lpadmin \
+    -p Ricoh_SPC240 \
+    -E \
+    -v socket://172.26.47.1:9100 \
+    -P cups/RicohAficioSPC240DN-CachyOS.ppd
+```
+
+Recent CUPS versions may display:
+
+```text
+lpadmin: Printer drivers are deprecated and will stop working in a future
+version of CUPS.
+```
+
+This is expected because this project deliberately uses the classic
+PPD/filter CUPS architecture.
+
+---
+
+## Check printer status
+
+```bash
+lpstat -p Ricoh_SPC240
+```
+
+and:
+
+```bash
+lpstat -v Ricoh_SPC240
+```
+
+The device URI should resemble:
+
+```text
+socket://PRINTER_IP:9100
+```
+
+---
+
+## Test the wrapper
+
+A raster file can be passed directly through the wrapper for debugging.
+
+The wrapper ultimately invokes the patched filter through Darling with:
+
+```text
+DYLD_FORCE_FLAT_NAMESPACE=1
+DYLD_INSERT_LIBRARIES=/Volumes/SystemRoot/tmp/libppdshim.dylib
+```
+
+A successful conversion should:
+
+1. process all raster bands,
+2. write a GDI stream,
+3. append `JIDG`,
+4. exit with status `0`.
+
+Example log ending:
+
+```text
 RasterFilter run: Processed 6816 lines
-```
-
-Job finalization:
-
-```text
+RasterFilter endPage: blankAccumulator = 0xff
 GDIFilter endJob:
 GDIFilter endJob: sending JIDG
 RasterFilter run: exiting - result: 1
 rasterToGDI ending with result 0
 ```
 
-The generated stream starts with the Ricoh GDI job signature:
+---
+
+## Debugging generated output
+
+Check the beginning of a generated file:
+
+```bash
+head -c 128 output.gdi | hexdump -C
+```
+
+A valid stream should begin with:
+
+```text
+47 44 49 4a
+```
+
+or:
 
 ```text
 GDIJ
 ```
 
-and terminates with:
+Check the end:
+
+```bash
+tail -c 32 output.gdi | hexdump -C
+```
+
+A completed job should end with:
+
+```text
+4a 49 44 47
+```
+
+or:
 
 ```text
 JIDG
 ```
 
-The resulting data was successfully printed by a physical Ricoh Aficio SP C240DN.
+---
+
+## Troubleshooting
+
+### `NSCalendarDate ... requires a subclass implementation`
+
+The unpatched original filter is being executed.
+
+Make sure the wrapper uses:
+
+```text
+RicohAficioSPC240DNFilter-final3
+```
+
+and not:
+
+```text
+RicohAficioSPC240DNFilter
+```
 
 ---
 
-# CUPS integration
+### `Library not loaded: @executable_path/../Frameworks/libDJZModule.dylib`
 
-The included PPD uses:
+The filter was copied out of its application bundle and executed separately.
 
-```text
-application/vnd.cups-raster
-```
-
-as the input to:
+It must remain in:
 
 ```text
-rastertoricohspc240
+RicohAficioSPC240DNFilter.app/Contents/MacOS/
 ```
 
-The CUPS filter copies the spool input to a temporary raster file that is accessible from the Darling environment.
+because it loads:
 
-It then invokes:
+```text
+../Frameworks/libDJZModule.dylib
+```
+
+relative to its executable location.
+
+---
+
+### Darling tries to create `//.darling`
+
+Example:
+
+```text
+Setting up a new Darling prefix at //.darling
+Cannot create //.darling: Permission denied
+```
+
+This occurs when Darling is executed directly as the CUPS service user.
+
+The supplied wrapper/sudo setup executes Darling using the configured desktop
+user and its existing Darling environment.
+
+---
+
+### sudo fails for the CUPS account
+
+An error similar to:
+
+```text
+The account is expired or the PAM configuration lacks an account section
+```
+
+means the CUPS system account is being rejected by PAM.
+
+Verify:
+
+```bash
+sudo visudo -cf /etc/sudoers.d/ricoh-spc240
+```
+
+and ensure the file contains:
+
+```sudoers
+Defaults:cups !pam_acct_mgmt
+cups ALL=(h3adbang3r) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
+```
+
+---
+
+### Empty GDI output
+
+If the generated file is zero bytes, verify that the raster input path is
+visible from inside Darling.
+
+Linux:
+
+```bash
+ls -lh /tmp/ricoh-test.raster
+```
+
+Darling:
+
+```bash
+darling shell ls -lh /Volumes/SystemRoot/tmp/ricoh-test.raster
+```
+
+When manually invoking the macOS filter, use the Darling-visible path:
+
+```text
+/Volumes/SystemRoot/tmp/ricoh-test.raster
+```
+
+rather than:
+
+```text
+/tmp/ricoh-test.raster
+```
+
+---
+
+## Security notes
+
+The CUPS account is **not** granted unrestricted sudo access.
+
+The sudoers configuration permits only:
 
 ```text
 /usr/local/libexec/ricoh-spc240-ddst
 ```
 
-under the user owning the configured Darling prefix.
+to be executed as the configured desktop user.
 
-The wrapper translates Linux paths into Darling paths:
+Because that wrapper crosses a privilege boundary, its ownership and
+permissions should prevent modification by the `cups` user.
 
-```text
-/tmp/example.raster
+Verify after installation:
+
+```bash
+ls -l /usr/local/libexec/ricoh-spc240-ddst
 ```
 
-becomes:
-
-```text
-/Volumes/SystemRoot/tmp/example.raster
-```
-
-The Ricoh filter's stdout becomes the CUPS backend input and is ultimately sent to the printer.
+The wrapper should be owned by `root` and must not be writable by `cups`.
 
 ---
 
-# Installation
+## CUPS deprecation notice
 
-Before installation, make sure Darling works for the configured user:
+Classic PPD-based printer drivers and CUPS filters are deprecated upstream.
 
-```bash
-sudo -u h3adbang3r darling shell uname -a
-```
-
-A working installation should return a Darwin environment.
-
-Then install with:
-
-```bash
-sudo ./install.sh
-```
-
-The installer:
-
-1. installs the Ricoh/Darling payload into `/opt/ricoh-spc240`
-2. installs the Darling wrapper
-3. installs the CUPS raster filter
-4. installs the required sudoers rule
-5. validates the sudoers configuration
-6. validates the PPD
-7. creates the CUPS printer queue
-8. restarts CUPS
-
----
-
-## Test print
-
-For example:
-
-```bash
-lp -d Ricoh_SPC240 test.pdf
-```
-
-Check the queue with:
-
-```bash
-lpstat -p Ricoh_SPC240
-lpstat -v Ricoh_SPC240
-```
-
-Expected device URI:
-
-```text
-socket://172.26.47.1:9100
-```
-
----
-
-# Debugging
-
-The original Ricoh filter contains extensive debugging support.
-
-Creating:
-
-```text
-/tmp/gdidebug
-```
-
-enables additional logging.
-
-The resulting log can be inspected at:
-
-```text
-/tmp/CUPSDebug.log
-```
-
-Do not leave debugging enabled permanently unless required.
-
-Useful commands:
-
-```bash
-tail -f /tmp/CUPSDebug.log
-```
-
-CUPS status:
-
-```bash
-lpstat -t
-```
-
-Recent CUPS service messages:
-
-```bash
-journalctl -u cups -n 100
-```
-
----
-
-# PPD validation
-
-The modified PPD can be checked with:
-
-```bash
-cupstestppd -v cups/RicohAficioSPC240DN-CachyOS.ppd
-```
-
-The working PPD passes validation without errors.
-
-Some warnings remain because the original Ricoh PPD uses legacy names such as:
-
-```text
-JISB5
-HalfLetter
-FS
-Foolscap
-Kai16
-Monarch
-```
-
-and an old-style `PCFileName`.
-
-These warnings have deliberately not been modified because they do not prevent printing and unnecessary changes to the original driver's option definitions are avoided.
-
----
-
-# CUPS deprecation warning
-
-Current CUPS versions may display:
+CUPS currently warns:
 
 ```text
 Printer drivers are deprecated and will stop working in a future version of CUPS.
 ```
 
-This project deliberately uses the classic PPD/filter architecture because the original proprietary Ricoh raster converter is being reused.
+Therefore this project should be considered a compatibility solution for
+systems where traditional CUPS driver/filter support is still available.
 
-The warning does not currently prevent the driver from working.
-
-A future implementation could potentially package the compatibility layer as a modern Printer Application / IPP-based solution.
+A future implementation may need to package the driver as a Printer
+Application or otherwise isolate a compatible CUPS environment.
 
 ---
 
-# Security notes
+## Preservation
 
-The current design permits the CUPS service account to execute the Ricoh wrapper as the user owning the Darling prefix through a narrowly scoped sudoers rule.
+This repository intentionally contains:
 
-Do **not** replace this with unrestricted passwordless sudo access.
+- the original Ricoh macOS filter,
+- Ricoh framework and resource files,
+- the ICC profile,
+- the Darling compatibility shim,
+- intermediate patched binaries,
+- the final working patched binary,
+- the CUPS PPD and filter,
+- the wrapper,
+- the sudo configuration,
+- and the installation script.
 
-The sudoers configuration should grant access only to:
+The intermediate binaries are deliberately preserved because they document
+the reverse-engineering process rather than being ordinary disposable build
+artifacts.
+
+A future improvement would be to provide reproducible patch scripts that
+generate each patched executable from the untouched original binary.
+
+---
+
+## Tested configuration
 
 ```text
-/usr/local/libexec/ricoh-spc240-ddst
+OS:       CachyOS / Arch Linux
+Printing: CUPS
+Runtime:  Darling
+Printer:  Ricoh Aficio SP C240DN
+Protocol: JetDirect / AppSocket
+Port:     TCP 9100
+Driver:   Original Ricoh macOS DDST/GDI filter
+Filter:   RicohAficioSPC240DNFilter-final3
+Result:   WORKING
 ```
 
-Review:
+Successfully tested with an actual printed page:
 
 ```text
-sudoers/ricoh-spc240
+CachyOS DDST TEST
 ```
-
-before installation.
-
----
-
-# Known limitations
-
-Currently tested:
-
-- Ricoh Aficio SP C240DN
-- network printing over TCP port 9100
-- A4
-- 600 dpi
-- monochrome/Gray
-- single-page printing
-- CachyOS
-- x86_64 Darling
-
-Additional features such as:
-
-- color printing
-- duplex
-- multiple pages
-- alternate trays
-- alternate paper types
-- other resolutions
-
-should be tested separately before being considered fully supported.
-
----
-
-# Preservation
-
-This repository intentionally retains several intermediate patched binaries.
-
-They document the reverse-engineering process that resulted in the working `final3` binary and may be useful if future Darling or CUPS changes require revisiting individual patches.
-
-A future improvement would be to replace the stored intermediate binaries with reproducible patch scripts that generate `final3` directly from the untouched original Ricoh executable.
 
 ---
 
 ## Disclaimer
 
-Ricoh trademarks and proprietary driver components belong to their respective owners.
+This is an unofficial compatibility project and is not affiliated with,
+endorsed by, or supported by Ricoh.
 
-This project is an experimental Linux compatibility setup and is not affiliated with or supported by Ricoh.
+The project relies on an old proprietary Ricoh macOS printer driver and on
+binary compatibility patches required to execute that driver through Darling.
+
+Use at your own risk.
+
+---
+
+## Result
+
+After a rather unreasonable amount of debugging:
+
+**Ricoh Aficio SP C240DN DDST printing works on CachyOS.** 🎉
