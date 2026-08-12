@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>RicohAficioSPC240DNFilter</string>
+	<key>CFBundleGetInfoString</key>
+	<string>2.05, Copyright (C) 2005-2020 RICOH COMPANY, LTD.</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.ricoh.print.240gdi.rasterFilter</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>RicohAficioSPC240DNFilter</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>2.05</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>2.05</string>
+	<key>CUPSFileHeader</key>
+	<string>84669FD5-804D-4467-9F0F-E5BC3490CECC</string>
+	<key>DestinyDuplex</key>
+	<string>False</string>
+	<key>DestinyDuplexBypass</key>
+	<string>False</string>
+	<key>DestinyDuplexOrder</key>
+	<string>642135</string>
+	<key>DestinyFlipDuplex</key>
+	<string>True</string>
+	<key>DestinyManualDuplex</key>
+	<string>False</string>
+	<key>MacOS102SourceProfile</key>
+	<string>/System/Library/ColorSync/Profiles/Generic CMYK Profile.icc</string>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>cupsICCProfile</key>
+	<string>/Library/Printers/Ricoh/Filters/RicohAficioSPC240DNFilter.app/Contents/Resources/RICOH Aficio SP C240DN CS.icc</string>
+</dict>
+</plist>

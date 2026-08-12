@@ -1,0 +1,4 @@
+/* Status string */
+"PageProgress" = "Elaborazione pagina %d in corso";
+
+"DriverCommError" = "Impossibile comunicare con la stampante";

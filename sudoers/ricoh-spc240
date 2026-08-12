@@ -1,0 +1,2 @@
+Defaults:cups !pam_acct_mgmt
+cups ALL=(h3adbang3r) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst

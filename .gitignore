@@ -1,0 +1,8 @@
+.DS_Store
+*.log
+*.core
+core
+core.*
+*.raster
+*.gdi
+*.tar.zst

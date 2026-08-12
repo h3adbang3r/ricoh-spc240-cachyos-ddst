@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+if [[ $# -lt 5 ]]; then
+    echo "ERROR: rastertoricohspc240: ungültige CUPS-Argumente" >&2
+    exit 1
+fi
+
+TMPFILE="$(mktemp /tmp/ricoh-cups-XXXXXX.raster)"
+
+cleanup() {
+    rm -f "$TMPFILE"
+}
+
+trap cleanup EXIT HUP INT TERM
+
+if [[ $# -ge 6 && -n "${6:-}" ]]; then
+    cat -- "$6" > "$TMPFILE"
+else
+    cat > "$TMPFILE"
+fi
+
+chmod 0644 "$TMPFILE"
+
+sudo -n -u h3adbang3r \
+    /usr/local/libexec/ricoh-spc240-ddst \
+    "$1" "$2" "$3" "$4" "$5" "$TMPFILE"

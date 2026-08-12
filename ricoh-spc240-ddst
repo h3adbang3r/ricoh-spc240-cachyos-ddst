@@ -1,0 +1,25 @@
+#!/bin/bash
+set -euo pipefail
+
+FILTER="/Volumes/SystemRoot/opt/ricoh-spc240/RicohAficioSPC240DNFilter.app/Contents/MacOS/RicohAficioSPC240DNFilter-final3"
+
+export DYLD_FORCE_FLAT_NAMESPACE=1
+export DYLD_INSERT_LIBRARIES="/Volumes/SystemRoot/opt/ricoh-spc240/libppdshim.dylib"
+
+if [[ $# -ge 6 && -n "${6:-}" ]]; then
+    INPUT="$6"
+
+    if [[ "$INPUT" == /Volumes/SystemRoot/* ]]; then
+        DARLING_INPUT="$INPUT"
+    else
+        DARLING_INPUT="/Volumes/SystemRoot$INPUT"
+    fi
+
+    exec /usr/bin/darling shell \
+        "$FILTER" \
+        "$1" "$2" "$3" "$4" "$5" \
+        "$DARLING_INPUT"
+else
+    echo "ERROR: Kein Raster-Eingabefile angegeben" >&2
+    exit 1
+fi
