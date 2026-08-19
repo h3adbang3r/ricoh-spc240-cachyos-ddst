@@ -322,8 +322,10 @@ Contents:
 
 ```sudoers
 Defaults:cups !pam_acct_mgmt
-cups ALL=(h3adbang3r) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
+cups ALL=(<DARLING_USER>) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
 ```
+<DARLING_USER> is automatically determined from the user who invokes
+sudo ./install.sh.
 
 The `pam_acct_mgmt` override is required because the `cups` service account has
 a `nologin` system-account configuration which otherwise causes sudo to fail
@@ -598,8 +600,10 @@ and ensure the file contains:
 
 ```sudoers
 Defaults:cups !pam_acct_mgmt
-cups ALL=(h3adbang3r) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
+cups ALL=(<DARLING_USER>) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
 ```
+<DARLING_USER> is automatically determined from the user who invokes
+sudo ./install.sh.
 
 ---
 
@@ -1061,8 +1065,10 @@ Inhalt:
 
 ```sudoers
 Defaults:cups !pam_acct_mgmt
-cups ALL=(h3adbang3r) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
+cups ALL=(<DARLING_USER>) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
 ```
+<DARLING_USER> wird automatisch aus dem Benutzer ermittelt,
+der sudo ./install.sh aufruft.
 
 Der `pam_acct_mgmt`-Override wird benötigt, weil der `cups`-Service-Account als
 Systemkonto mit `nologin` konfiguriert ist und sudo andernfalls mit einem
@@ -1333,8 +1339,10 @@ und sicherstellen, dass die Datei enthält:
 
 ```sudoers
 Defaults:cups !pam_acct_mgmt
-cups ALL=(h3adbang3r) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
+cups ALL=(<DARLING_USER>) NOPASSWD: /usr/local/libexec/ricoh-spc240-ddst
 ```
+<DARLING_USER> wird automatisch aus dem Benutzer ermittelt,
+der sudo ./install.sh aufruft.
 
 ### Leere GDI-Ausgabe
 

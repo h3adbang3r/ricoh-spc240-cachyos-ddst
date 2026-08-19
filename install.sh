@@ -186,8 +186,8 @@ install \
 # sudoers
 #
 # CUPS läuft als UID/GID 209 (cups).
-# Der Darling-Wrapper wird über den Benutzer h3adbang3r
-# gestartet.
+# Der Darling-Wrapper wird über den automatisch ermittelten
+# Desktop-Benutzer gestartet.
 # ------------------------------------------------------------
 
 echo "==> sudoers-Regel installieren"

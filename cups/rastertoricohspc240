@@ -1,5 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
+
+CONFIG="/etc/ricoh-spc240.conf"
+
+if [[ ! -r "$CONFIG" ]]; then
+    echo "ERROR: $CONFIG fehlt oder ist nicht lesbar." >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$CONFIG"
+
+: "${DARLING_USER:?DARLING_USER fehlt in $CONFIG}"
 
 if [[ $# -lt 5 ]]; then
     echo "ERROR: rastertoricohspc240: ungültige CUPS-Argumente" >&2
@@ -22,6 +34,6 @@ fi
 
 chmod 0644 "$TMPFILE"
 
-sudo -n -u h3adbang3r \
+exec sudo -n -u "$DARLING_USER" \
     /usr/local/libexec/ricoh-spc240-ddst \
     "$1" "$2" "$3" "$4" "$5" "$TMPFILE"
