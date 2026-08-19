@@ -1,0 +1,93 @@
+{
+  "format": 1,
+  "architecture": "Mach-O universal binary; patches describe file offsets",
+  "source": "RicohAficioSPC240DNFilter",
+  "final": "RicohAficioSPC240DNFilter-final3",
+  "stages": [
+    {
+      "from": "RicohAficioSPC240DNFilter",
+      "to": "RicohAficioSPC240DNFilter-patched",
+      "description": "Bypass the Darling-incompatible NSCalendarDate/destinyDate path.",
+      "sha256_before": "49eb2f32fdbf118ee23bcc1610b9c2bd1fa30117a137a25d1030379213f73074",
+      "sha256_after": "df99027d149c01cb3e239ec23e4fe1cc7d48a5fa0d40d93d6ce5a9601c28a0dd",
+      "size": 286464,
+      "changes": [
+        {
+          "offset": 18399,
+          "offset_hex": "0x47df",
+          "length": 29,
+          "before": "488b3d52af0000ff15d4a50000488d35bda500004889c7ff15b4a50000",
+          "after": "31c0909090909090909090909090909090909090909090909090909090"
+        }
+      ]
+    },
+    {
+      "from": "RicohAficioSPC240DNFilter-patched",
+      "to": "RicohAficioSPC240DNFilter-test2",
+      "description": "Experimental end-of-page/control-flow compatibility stage.",
+      "sha256_before": "df99027d149c01cb3e239ec23e4fe1cc7d48a5fa0d40d93d6ce5a9601c28a0dd",
+      "sha256_after": "dab205699927c240e84395a881e260ef7224f7c45bee923193f2c1d78ae046f5",
+      "size": 286464,
+      "changes": [
+        {
+          "offset": 22971,
+          "offset_hex": "0x59bb",
+          "length": 7,
+          "before": "4c8d3ddebf0000",
+          "after": "e9080100009090"
+        }
+      ]
+    },
+    {
+      "from": "RicohAficioSPC240DNFilter-test2",
+      "to": "RicohAficioSPC240DNFilter-final",
+      "description": "Preserve endPage return state while bypassing incompatible cleanup/control flow.",
+      "sha256_before": "dab205699927c240e84395a881e260ef7224f7c45bee923193f2c1d78ae046f5",
+      "sha256_after": "60bbcd42dd798c2b2ef5b153e70ed0e792b090b48933606a65ce0116c1c50213",
+      "size": 286464,
+      "changes": [
+        {
+          "offset": 22971,
+          "offset_hex": "0x59bb",
+          "length": 15,
+          "before": "e90801000090908845bfeb774189d5",
+          "after": "4c8d3ddebf00008845bfe9fe000000"
+        }
+      ]
+    },
+    {
+      "from": "RicohAficioSPC240DNFilter-final",
+      "to": "RicohAficioSPC240DNFilter-final2",
+      "description": "Bypass the insertBlankPage path that triggers SIGFPE under Darling.",
+      "sha256_before": "60bbcd42dd798c2b2ef5b153e70ed0e792b090b48933606a65ce0116c1c50213",
+      "sha256_after": "3e3db7c10f399fdf2aa19305c20ead95d800337fe925732bd14dbbe84e911126",
+      "size": 286464,
+      "changes": [
+        {
+          "offset": 36421,
+          "offset_hex": "0x8e45",
+          "length": 1,
+          "before": "74",
+          "after": "eb"
+        }
+      ]
+    },
+    {
+      "from": "RicohAficioSPC240DNFilter-final2",
+      "to": "RicohAficioSPC240DNFilter-final3",
+      "description": "Set the successful run return state while retaining the insertBlankPage bypass.",
+      "sha256_before": "3e3db7c10f399fdf2aa19305c20ead95d800337fe925732bd14dbbe84e911126",
+      "sha256_after": "af5b39eb9af65e0aca9a56d3dc2b6f5ec76ae563c354a2f1cc4be9fa770161f2",
+      "size": 286464,
+      "changes": [
+        {
+          "offset": 36418,
+          "offset_hex": "0x8e42",
+          "length": 3,
+          "before": "4584ed",
+          "after": "41b601"
+        }
+      ]
+    }
+  ]
+}

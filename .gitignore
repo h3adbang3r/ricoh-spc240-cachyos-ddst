@@ -6,3 +6,6 @@ core.*
 *.raster
 *.gdi
 *.tar.zst
+
+# Generated patch verification
+build/
